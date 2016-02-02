@@ -1201,7 +1201,7 @@ class Log(@volatile var dir: File,
    */
   def deleteOldSegments(): Int = {
     if (!config.delete) return 0
-    deleteRetentionMsBreachedSegments() + deleteRetentionSizeBreachedSegments() + deleteLogStartOffsetBreachedSegments()
+    deleteRetentionMsBreachedSegments() + deleteRetentionSizeBreachedSegments() + deleteLogStartOffsetBreachedSegments() + deleteRetentionTimestampBreachedSegments()
   }
 
   private def deleteRetentionMsBreachedSegments(): Int = {
@@ -1229,6 +1229,13 @@ class Log(@volatile var dir: File,
     def shouldDelete(segment: LogSegment, nextSegmentOpt: Option[LogSegment]) =
       nextSegmentOpt.exists(_.baseOffset <= logStartOffset)
     deleteOldSegments(shouldDelete, reason = s"log start offset $logStartOffset breach")
+  }
+
+  private def deleteRetentionTimestampBreachedSegments() : Int = {
+    if(config.retentionMinTimestamp <= 0) return 0
+    def shouldDelete(segment: LogSegment, nextSegmentOpt: Option[LogSegment]) =
+      segment.largestTimestamp < config.retentionMinTimestamp
+    deleteOldSegments(shouldDelete, reason = s"min timestamp ${config.retentionMinTimestamp} breach")
   }
 
   /**
