@@ -223,7 +223,7 @@ class PartitionStateMachine(controller: KafkaController, stateChangeLogger: Stat
    */
   private def initializeLeaderAndIsrForPartition(topicAndPartition: TopicAndPartition) = {
     val replicaAssignment = controllerContext.partitionReplicaAssignment(topicAndPartition).toList
-    val liveAssignedReplicas = replicaAssignment.filter(r => controllerContext.isReplicaOnline(r, topicAndPartition))
+    val liveAssignedReplicas = replicaAssignment.filter(r => controllerContext.isReplicaOnline(r, topicAndPartition) && r != controllerContext.leaderIneligibleBrokerId)
     val stateChangeLog = stateChangeLogger.withControllerEpoch(controller.epoch)
     liveAssignedReplicas.headOption match {
       case None =>

@@ -53,6 +53,7 @@ class ControllerContext(val zkUtils: ZkUtils) {
   var partitionLeadershipInfo: mutable.Map[TopicAndPartition, LeaderIsrAndControllerEpoch] = mutable.Map.empty
   val partitionsBeingReassigned: mutable.Map[TopicAndPartition, ReassignedPartitionsContext] = new mutable.HashMap
   val replicasOnOfflineDirs: mutable.Map[Int, Set[TopicAndPartition]] = mutable.HashMap.empty
+  var leaderIneligibleBrokerId: Int = -1
 
   private var liveBrokersUnderlying: Set[Broker] = Set.empty
   private var liveBrokerIdsUnderlying: Set[Int] = Set.empty
@@ -129,7 +130,7 @@ class ControllerContext(val zkUtils: ZkUtils) {
 
 
 object KafkaController extends Logging {
-  
+
   val InitialControllerEpoch = 1
   val InitialControllerEpochZkVersion = 1
 
@@ -708,6 +709,8 @@ class KafkaController(val config: KafkaConfig, zkUtils: ZkUtils, time: Time, met
     controllerContext.partitionReplicaAssignment = zkUtils.getReplicaAssignmentForTopics(controllerContext.allTopics.toSeq)
     controllerContext.partitionLeadershipInfo = new mutable.HashMap[TopicAndPartition, LeaderIsrAndControllerEpoch]
     controllerContext.shuttingDownBrokerIds = mutable.Set.empty[Int]
+    controllerContext.leaderIneligibleBrokerId = config.leaderIneligibleBrokerId
+
     // update the leader and isr cache for all existing partitions from Zookeeper
     updateLeaderAndIsrCache()
     // start the channel manager
@@ -1079,7 +1082,7 @@ class KafkaController(val config: KafkaConfig, zkUtils: ZkUtils, time: Time, met
             // if the replica to be removed from the ISR is the last surviving member of the ISR and unclean leader election
             // is disallowed for the corresponding topic, then we must preserve the ISR membership so that the replica can
             // eventually be restored as the leader.
-            if (newIsr.isEmpty && !LogConfig.fromProps(config.originals, AdminUtils.fetchEntityConfig(zkUtils,
+            if (newIsr.filterNot(replicaId => replicaId == controllerContext.leaderIneligibleBrokerId).isEmpty && !LogConfig.fromProps(config.originals, AdminUtils.fetchEntityConfig(zkUtils,
               ConfigType.Topic, topicAndPartition.topic)).uncleanLeaderElectionEnable) {
               info("Retaining last ISR %d of partition %s since unclean leader election is disabled".format(replicaId, topicAndPartition))
               newIsr = leaderAndIsr.isr

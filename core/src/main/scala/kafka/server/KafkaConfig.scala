@@ -55,6 +55,7 @@ object Defaults {
   val BackgroundThreads = 10
   val QueuedMaxRequests = 500
   val QueuedMaxRequestBytes = -1
+  val LeaderIneligibleBrokerId = -1
 
   /************* Authorizer Configuration ***********/
   val AuthorizerClassName = ""
@@ -241,6 +242,7 @@ object KafkaConfig {
   val QueuedMaxRequestsProp = "queued.max.requests"
   val QueuedMaxBytesProp = "queued.max.request.bytes"
   val RequestTimeoutMsProp = CommonClientConfigs.REQUEST_TIMEOUT_MS_CONFIG
+  val LeaderIneligibleBrokerIdProp = "leader.ineligible.broker.id"
   /************* Authorizer Configuration ***********/
   val AuthorizerClassNameProp = "authorizer.class.name"
   /** ********* Socket Server Configuration ***********/
@@ -702,6 +704,7 @@ object KafkaConfig {
       .define(QueuedMaxRequestsProp, INT, Defaults.QueuedMaxRequests, atLeast(1), HIGH, QueuedMaxRequestsDoc)
       .define(QueuedMaxBytesProp, LONG, Defaults.QueuedMaxRequestBytes, MEDIUM, QueuedMaxRequestBytesDoc)
       .define(RequestTimeoutMsProp, INT, Defaults.RequestTimeoutMs, HIGH, RequestTimeoutMsDoc)
+      .define(LeaderIneligibleBrokerIdProp, INT, Defaults.LeaderIneligibleBrokerId, HIGH, BrokerIdDoc)
 
       /************* Authorizer Configuration ***********/
       .define(AuthorizerClassNameProp, STRING, Defaults.AuthorizerClassName, LOW, AuthorizerClassNameDoc)
@@ -922,6 +925,7 @@ class KafkaConfig(val props: java.util.Map[_, _], doLog: Boolean) extends Abstra
   val numIoThreads = getInt(KafkaConfig.NumIoThreadsProp)
   val messageMaxBytes = getInt(KafkaConfig.MessageMaxBytesProp)
   val requestTimeoutMs = getInt(KafkaConfig.RequestTimeoutMsProp)
+  val leaderIneligibleBrokerId = getInt(KafkaConfig.LeaderIneligibleBrokerIdProp)
 
   /************* Authorizer Configuration ***********/
   val authorizerClassName: String = getString(KafkaConfig.AuthorizerClassNameProp)
