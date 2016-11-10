@@ -162,8 +162,7 @@ class KafkaController(val config : KafkaConfig, zkUtils: ZkUtils, val brokerStat
   val controllerContext = new ControllerContext(zkUtils, config.zkSessionTimeoutMs)
   val partitionStateMachine = new PartitionStateMachine(this)
   val replicaStateMachine = new ReplicaStateMachine(this)
-  private val controllerElector = new ZookeeperLeaderElector(controllerContext, ZkUtils.ControllerPath, onControllerFailover,
-    onControllerResignation, config.brokerId)
+  private var controllerElector: LeaderElector = null
   // have a separate scheduler for the controller to be able to start and stop independently of the
   // kafka server
   private val autoRebalanceScheduler = new KafkaScheduler(1)
@@ -279,7 +278,7 @@ class KafkaController(val config : KafkaConfig, zkUtils: ZkUtils, val brokerStat
                       // Resign if the controller is in an illegal state
                       error("Forcing the controller to resign")
                       brokerRequestBatch.clear()
-                      controllerElector.resign()
+                      controllerElector.resign
 
                       throw e
                     }
@@ -670,6 +669,15 @@ class KafkaController(val config : KafkaConfig, zkUtils: ZkUtils, val brokerStat
     }
   }
 
+  def initializeControllerElector() = {
+    controllerElector =
+      if (config.brokerId == config.leaderIneligibleBrokerId)
+        new NoOpLeaderElector()
+      else
+        new ZookeeperLeaderElector(controllerContext, ZkUtils.ControllerPath, onControllerFailover,
+          onControllerResignation, config.brokerId)
+  }
+
   /**
    * Invoked when the controller module of a Kafka server is started up. This does not assume that the current broker
    * is the controller. It merely registers the session expiration listener and starts the controller leader
@@ -680,6 +688,8 @@ class KafkaController(val config : KafkaConfig, zkUtils: ZkUtils, val brokerStat
       info("Controller starting up")
       registerSessionExpirationListener()
       isRunning = true
+
+      initializeControllerElector()
       controllerElector.startup
       info("Controller startup complete")
     }
@@ -916,7 +926,7 @@ class KafkaController(val config : KafkaConfig, zkUtils: ZkUtils, val brokerStat
             // Resign if the controller is in an illegal state
             error("Forcing the controller to resign")
             brokerRequestBatch.clear()
-            controllerElector.resign()
+            controllerElector.resign
 
             throw e
           }
@@ -1036,7 +1046,7 @@ class KafkaController(val config : KafkaConfig, zkUtils: ZkUtils, val brokerStat
         // Resign if the controller is in an illegal state
         error("Forcing the controller to resign")
         brokerRequestBatch.clear()
-        controllerElector.resign()
+        controllerElector.resign
 
         throw e
       }
