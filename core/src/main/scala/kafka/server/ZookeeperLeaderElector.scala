@@ -94,7 +94,7 @@ class ZookeeperLeaderElector(controllerContext: ControllerContext,
 
       case e2: Throwable =>
         error("Error while electing or becoming leader on broker %d".format(brokerId), e2)
-        resign()
+        resign
     }
     amILeader
   }
@@ -105,7 +105,7 @@ class ZookeeperLeaderElector(controllerContext: ControllerContext,
 
   def amILeader : Boolean = leaderId == brokerId
 
-  def resign() = {
+  def resign = {
     leaderId = -1
     controllerContext.zkUtils.deletePath(electionPath)
   }

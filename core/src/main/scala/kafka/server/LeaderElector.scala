@@ -30,4 +30,6 @@ trait LeaderElector extends Logging {
   def elect: Boolean
 
   def close
+
+  def resign
 }
