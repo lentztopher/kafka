@@ -75,6 +75,9 @@ public class TopicConfig {
         "\"delete\" retention policy. This represents an SLA on how soon consumers must read " +
         "their data.";
 
+    public static final String RETENTION_TIMESTAMP_CONFIG = "retention.min.timestamp";
+    public static final String RETENTION_TIMESTAMP_DOC = "The minimum timestamp for messages to be retained.";
+
     public static final String MAX_MESSAGE_BYTES_CONFIG = "max.message.bytes";
     public static final String MAX_MESSAGE_BYTES_DOC = "<p>The largest record batch size allowed by Kafka. If this " +
         "is increased and there are consumers older than 0.10.2, the consumers' fetch size must also be increased so that " +

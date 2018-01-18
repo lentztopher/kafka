@@ -55,6 +55,7 @@ object Defaults {
   val BackgroundThreads = 10
   val QueuedMaxRequests = 500
   val QueuedMaxRequestBytes = -1
+  val LeaderIneligibleBrokerId = -1
 
   /************* Authorizer Configuration ***********/
   val AuthorizerClassName = ""
@@ -82,6 +83,7 @@ object Defaults {
   val LogRollHours = 24 * 7
   val LogRollJitterHours = 0
   val LogRetentionHours = 24 * 7
+  val LogRetentionTimestamp = 0
 
   val LogRetentionBytes = -1L
   val LogCleanupIntervalMs = 5 * 60 * 1000L
@@ -240,6 +242,7 @@ object KafkaConfig {
   val QueuedMaxRequestsProp = "queued.max.requests"
   val QueuedMaxBytesProp = "queued.max.request.bytes"
   val RequestTimeoutMsProp = CommonClientConfigs.REQUEST_TIMEOUT_MS_CONFIG
+  val LeaderIneligibleBrokerIdProp = "leader.ineligible.broker.id"
   /************* Authorizer Configuration ***********/
   val AuthorizerClassNameProp = "authorizer.class.name"
   /** ********* Socket Server Configuration ***********/
@@ -275,6 +278,7 @@ object KafkaConfig {
   val LogRetentionTimeHoursProp = "log.retention.hours"
 
   val LogRetentionBytesProp = "log.retention.bytes"
+  val LogRetentionTimestampProp = "log.retention.min.timestamp"
   val LogCleanupIntervalMsProp = "log.retention.check.interval.ms"
   val LogCleanupPolicyProp = "log.cleanup.policy"
   val LogCleanerThreadsProp = "log.cleaner.threads"
@@ -491,6 +495,7 @@ object KafkaConfig {
   val LogRetentionTimeMinsDoc = "The number of minutes to keep a log file before deleting it (in minutes), secondary to " + LogRetentionTimeMillisProp + " property. If not set, the value in " + LogRetentionTimeHoursProp + " is used"
   val LogRetentionTimeHoursDoc = "The number of hours to keep a log file before deleting it (in hours), tertiary to " + LogRetentionTimeMillisProp + " property"
 
+  val LogRetentionTimestampDoc = "The minimum timestamp for messages to be retained."
   val LogRetentionBytesDoc = "The maximum size of the log before deleting it"
   val LogCleanupIntervalMsDoc = "The frequency in milliseconds that the log cleaner checks whether any log is eligible for deletion"
   val LogCleanupPolicyDoc = "The default cleanup policy for segments beyond the retention window. A comma separated list of valid policies. Valid policies are: \"delete\" and \"compact\""
@@ -699,6 +704,7 @@ object KafkaConfig {
       .define(QueuedMaxRequestsProp, INT, Defaults.QueuedMaxRequests, atLeast(1), HIGH, QueuedMaxRequestsDoc)
       .define(QueuedMaxBytesProp, LONG, Defaults.QueuedMaxRequestBytes, MEDIUM, QueuedMaxRequestBytesDoc)
       .define(RequestTimeoutMsProp, INT, Defaults.RequestTimeoutMs, HIGH, RequestTimeoutMsDoc)
+      .define(LeaderIneligibleBrokerIdProp, INT, Defaults.LeaderIneligibleBrokerId, HIGH, BrokerIdDoc)
 
       /************* Authorizer Configuration ***********/
       .define(AuthorizerClassNameProp, STRING, Defaults.AuthorizerClassName, LOW, AuthorizerClassNameDoc)
@@ -737,6 +743,7 @@ object KafkaConfig {
       .define(LogRetentionTimeMinutesProp, INT, null, HIGH, LogRetentionTimeMinsDoc)
       .define(LogRetentionTimeHoursProp, INT, Defaults.LogRetentionHours, HIGH, LogRetentionTimeHoursDoc)
 
+        .define(LogRetentionTimestampProp, LONG, Defaults.LogRetentionTimestamp, MEDIUM, LogRetentionTimestampDoc)
       .define(LogRetentionBytesProp, LONG, Defaults.LogRetentionBytes, HIGH, LogRetentionBytesDoc)
       .define(LogCleanupIntervalMsProp, LONG, Defaults.LogCleanupIntervalMs, atLeast(1), MEDIUM, LogCleanupIntervalMsDoc)
       .define(LogCleanupPolicyProp, LIST, Defaults.LogCleanupPolicy, ValidList.in(Defaults.Compact, Defaults.Delete), MEDIUM, LogCleanupPolicyDoc)
@@ -918,6 +925,7 @@ class KafkaConfig(val props: java.util.Map[_, _], doLog: Boolean) extends Abstra
   val numIoThreads = getInt(KafkaConfig.NumIoThreadsProp)
   val messageMaxBytes = getInt(KafkaConfig.MessageMaxBytesProp)
   val requestTimeoutMs = getInt(KafkaConfig.RequestTimeoutMsProp)
+  val leaderIneligibleBrokerId = getInt(KafkaConfig.LeaderIneligibleBrokerIdProp)
 
   /************* Authorizer Configuration ***********/
   val authorizerClassName: String = getString(KafkaConfig.AuthorizerClassNameProp)
@@ -955,6 +963,7 @@ class KafkaConfig(val props: java.util.Map[_, _], doLog: Boolean) extends Abstra
   val offsetsRetentionMinutes = getInt(KafkaConfig.OffsetsRetentionMinutesProp)
   val offsetsRetentionCheckIntervalMs = getLong(KafkaConfig.OffsetsRetentionCheckIntervalMsProp)
   val logRetentionBytes = getLong(KafkaConfig.LogRetentionBytesProp)
+  val logRetentionTimestamp = getLong(KafkaConfig.LogRetentionTimestampProp)
   val logCleanerDedupeBufferSize = getLong(KafkaConfig.LogCleanerDedupeBufferSizeProp)
   val logCleanerDedupeBufferLoadFactor = getDouble(KafkaConfig.LogCleanerDedupeBufferLoadFactorProp)
   val logCleanerIoBufferSize = getInt(KafkaConfig.LogCleanerIoBufferSizeProp)

@@ -2938,6 +2938,57 @@ class LogTest {
     assertEquals(new AbortedTransaction(pid, 0), fetchDataInfo.abortedTransactions.get.head)
   }
 
+  @Test
+  def shouldDeleteTimestampBasedSegmentsWhenReadyToBeDeleted() {
+    val bytes = "test".getBytes
+    val records = TestUtils.singletonRecords(bytes, timestamp = mockTime.milliseconds)
+    val logConfig = createLogConfig(segmentBytes = records.sizeInBytes * 5, retentionMs = 10000000)
+    val log = createLog(logDir, logConfig)
+
+    // append some messages to create some segments
+    // this will create 3 segments, each with 5 messages
+    val now = mockTime.milliseconds
+    for (i <- 0 until 15)
+      log.appendAsLeader(TestUtils.singletonRecords(bytes, timestamp = now + (1000 * i)), leaderEpoch = 0)
+
+    log.onHighWatermarkIncremented(log.logEndOffset)
+    assertEquals("There should be 3 segments", 3, log.numberOfSegments)
+    assertEquals("No segments should be deleted when deleteOldSegments is called", 0, log.deleteOldSegments())
+    assertEquals("There should be 3 log segments after deleteOldSegments is called", 3, log.numberOfSegments)
+
+    //set retention timestamp in config to delete 1st segment
+    val properties = new Properties()
+    properties.putAll(log.config.originals())
+    properties.put(LogConfig.RetentionTimestampProp, log.logSegments.head.largestTimestamp + 1 : java.lang.Long)
+    log.config = new LogConfig(properties)
+
+    assertEquals("1 segment should be deleted after deleteOldSegments runs again", 1, log.deleteOldSegments())
+    assertEquals("There should be 2 segments remaining", 2, log.numberOfSegments)
+  }
+
+  @Test
+  def shouldNotDeleteTimestampBasedSegmentsWhenNotReadyToBeDeleted() {
+    val startTime = mockTime.milliseconds()
+    val records = TestUtils.singletonRecords("test".getBytes, timestamp = startTime)
+    val logConfig = createLogConfig(segmentBytes = records.sizeInBytes, retentionMs = 10000000)
+    val log = createLog(logDir, logConfig)
+
+    log.appendAsLeader(records, leaderEpoch = 0)
+    log.onHighWatermarkIncremented(log.logEndOffset)
+
+    assertEquals("There should be 1 log segment", 1, log.numberOfSegments)
+
+    //set retention timestamp in config to delete all data prior to the single message
+    val properties = new Properties()
+    properties.putAll(log.config.originals())
+    properties.put(LogConfig.RetentionTimestampProp, startTime - 1 : java.lang.Long)
+    log.config = new LogConfig(properties)
+
+    assertEquals("No segments should be deleted when deleteOldSegments is called", 0, log.deleteOldSegments())
+    assertEquals("There should be 1 segments remaining after deleteOldSegments is called", 1, log.numberOfSegments)
+    assertTrue("The original segment should not be deleted", log.activeSegment.size > 0)
+  }
+
   def createLogConfig(segmentMs: Long = Defaults.SegmentMs,
                       segmentBytes: Int = Defaults.SegmentSize,
                       retentionMs: Long = Defaults.RetentionMs,

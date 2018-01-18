@@ -40,6 +40,7 @@ object Defaults {
   val FlushMs = kafka.server.Defaults.LogFlushSchedulerIntervalMs
   val RetentionSize = kafka.server.Defaults.LogRetentionBytes
   val RetentionMs = kafka.server.Defaults.LogRetentionHours * 60 * 60 * 1000L
+  val RetentionTimestamp = kafka.server.Defaults.LogRetentionTimestamp
   val MaxMessageSize = kafka.server.Defaults.MessageMaxBytes
   val MaxIndexSize = kafka.server.Defaults.LogIndexSizeMaxBytes
   val IndexInterval = kafka.server.Defaults.LogIndexIntervalBytes
@@ -78,6 +79,7 @@ case class LogConfig(props: java.util.Map[_, _]) extends AbstractConfig(LogConfi
   val flushMs = getLong(LogConfig.FlushMsProp)
   val retentionSize = getLong(LogConfig.RetentionBytesProp)
   val retentionMs = getLong(LogConfig.RetentionMsProp)
+  val retentionMinTimestamp = getLong(LogConfig.RetentionTimestampProp)
   val maxMessageSize = getInt(LogConfig.MaxMessageBytesProp)
   val indexInterval = getInt(LogConfig.IndexIntervalBytesProp)
   val fileDeleteDelayMs = getLong(LogConfig.FileDeleteDelayMsProp)
@@ -114,6 +116,7 @@ object LogConfig {
   val FlushMsProp = TopicConfig.FLUSH_MS_CONFIG
   val RetentionBytesProp = TopicConfig.RETENTION_BYTES_CONFIG
   val RetentionMsProp = TopicConfig.RETENTION_MS_CONFIG
+  val RetentionTimestampProp = TopicConfig.RETENTION_TIMESTAMP_CONFIG
   val MaxMessageBytesProp = TopicConfig.MAX_MESSAGE_BYTES_CONFIG
   val IndexIntervalBytesProp = TopicConfig.INDEX_INTERVAL_BYTES_CONFIG
   val DeleteRetentionMsProp = TopicConfig.DELETE_RETENTION_MS_CONFIG
@@ -143,6 +146,7 @@ object LogConfig {
   val FlushMsDoc = TopicConfig.FLUSH_MS_DOC
   val RetentionSizeDoc = TopicConfig.RETENTION_BYTES_DOC
   val RetentionMsDoc = TopicConfig.RETENTION_MS_DOC
+  val RetentionTimestampDoc = TopicConfig.RETENTION_TIMESTAMP_DOC
   val MaxMessageSizeDoc = TopicConfig.MAX_MESSAGE_BYTES_DOC
   val IndexIntervalDoc = TopicConfig.INDEX_INTERVAL_BYTES_DOCS
   val FileDeleteDelayMsDoc = TopicConfig.FILE_DELETE_DELAY_MS_DOC
@@ -229,6 +233,8 @@ object LogConfig {
       // can be negative. See kafka.log.LogManager.cleanupExpiredSegments
       .define(RetentionMsProp, LONG, Defaults.RetentionMs, MEDIUM, RetentionMsDoc,
         KafkaConfig.LogRetentionTimeMillisProp)
+      .define(RetentionTimestampProp, LONG, Defaults.RetentionTimestamp, MEDIUM, RetentionTimestampDoc,
+        KafkaConfig.LogRetentionTimestampProp)
       .define(MaxMessageBytesProp, INT, Defaults.MaxMessageSize, atLeast(0), MEDIUM, MaxMessageSizeDoc,
         KafkaConfig.MessageMaxBytesProp)
       .define(IndexIntervalBytesProp, INT, Defaults.IndexInterval, atLeast(0), MEDIUM, IndexIntervalDoc,

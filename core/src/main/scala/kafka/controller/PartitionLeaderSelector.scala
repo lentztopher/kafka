@@ -55,6 +55,7 @@ class OfflinePartitionLeaderSelector(controllerContext: ControllerContext, confi
     controllerContext.partitionReplicaAssignment.get(topicAndPartition) match {
       case Some(assignedReplicas) =>
         val liveAssignedReplicas = assignedReplicas.filter(r => controllerContext.isReplicaOnline(r, topicAndPartition))
+        val candidates = liveAssignedReplicas.filter( _ != config.leaderIneligibleBrokerId )
         val liveBrokersInIsr = currentLeaderAndIsr.isr.filter(r => controllerContext.isReplicaOnline(r, topicAndPartition))
         val newLeaderAndIsr =
           if (liveBrokersInIsr.isEmpty) {
@@ -70,22 +71,29 @@ class OfflinePartitionLeaderSelector(controllerContext: ControllerContext, confi
             debug(s"No broker in ISR is alive for $topicAndPartition. Pick the leader from the alive assigned " +
               s"replicas: ${liveAssignedReplicas.mkString(",")}")
 
-            if (liveAssignedReplicas.isEmpty) {
+            if (candidates.isEmpty) {
               throw new NoReplicaOnlineException(s"No replica for partition $topicAndPartition is alive. Live " +
                 s"brokers are: [${controllerContext.liveBrokerIds}]. Assigned replicas are: [$assignedReplicas].")
             } else {
               controllerContext.stats.uncleanLeaderElectionRate.mark()
-              val newLeader = liveAssignedReplicas.head
+              val newLeader = candidates.head
               warn(s"No broker in ISR is alive for $topicAndPartition. Elect leader $newLeader from live " +
                 s"brokers ${liveAssignedReplicas.mkString(",")}. There's potential data loss.")
               currentLeaderAndIsr.newLeaderAndIsr(newLeader, List(newLeader))
             }
           } else {
-            val liveReplicasInIsr = liveAssignedReplicas.filter(r => liveBrokersInIsr.contains(r))
-            val newLeader = liveReplicasInIsr.head
-            debug(s"Some broker in ISR is alive for $topicAndPartition. Select $newLeader from ISR " +
-              s"${liveBrokersInIsr.mkString(",")} to be the leader.")
-            currentLeaderAndIsr.newLeaderAndIsr(newLeader, liveBrokersInIsr)
+            val liveReplicasInIsr = candidates.filter(r => liveBrokersInIsr.contains(r))
+            if (liveReplicasInIsr.isEmpty) {
+              throw new NoReplicaOnlineException(("No replica for partition " +
+                "%s is alive. Live brokers are: [%s],".format(topicAndPartition, controllerContext.liveBrokerIds)) +
+                " Assigned replicas are: [%s]".format(assignedReplicas) +
+                " Ineligible replicas are: [%s]".format(config.leaderIneligibleBrokerId))
+            } else {
+              val newLeader = liveReplicasInIsr.head
+              debug(s"Some broker in ISR is alive for $topicAndPartition. Select $newLeader from ISR " +
+                s"${liveBrokersInIsr.mkString(",")} to be the leader.")
+              currentLeaderAndIsr.newLeaderAndIsr(newLeader, liveBrokersInIsr)
+            }
           }
         info(s"Selected new leader and ISR $newLeaderAndIsr for offline partition $topicAndPartition")
         (newLeaderAndIsr, liveAssignedReplicas)
@@ -111,12 +119,12 @@ class ReassignedPartitionLeaderSelector(controllerContext: ControllerContext) ex
                    currentLeaderAndIsr: LeaderAndIsr): (LeaderAndIsr, Seq[Int]) = {
     val reassignedInSyncReplicas = controllerContext.partitionsBeingReassigned(topicAndPartition).newReplicas
     val newLeaderOpt = reassignedInSyncReplicas.find { r =>
-      controllerContext.isReplicaOnline(r, topicAndPartition) && currentLeaderAndIsr.isr.contains(r)
+      r != controllerContext.leaderIneligibleBrokerId && controllerContext.isReplicaOnline(r, topicAndPartition) && currentLeaderAndIsr.isr.contains(r)
     }
     newLeaderOpt match {
       case Some(newLeader) => (currentLeaderAndIsr.newLeader(newLeader), reassignedInSyncReplicas)
       case None =>
-        val errorMessage = if (reassignedInSyncReplicas.isEmpty) {
+        val errorMessage = if (reassignedInSyncReplicas.filter(_ != controllerContext.leaderIneligibleBrokerId).isEmpty) {
           s"List of reassigned replicas for partition $topicAndPartition is empty. Current leader and ISR: " +
             s"[$currentLeaderAndIsr]"
         } else {
@@ -140,7 +148,14 @@ class PreferredReplicaPartitionLeaderSelector(controllerContext: ControllerConte
   def selectLeader(topicAndPartition: TopicAndPartition,
                    currentLeaderAndIsr: LeaderAndIsr): (LeaderAndIsr, Seq[Int]) = {
     val assignedReplicas = controllerContext.partitionReplicaAssignment(topicAndPartition)
-    val preferredReplica = assignedReplicas.head
+    val candidates = assignedReplicas.filter(_ != controllerContext.leaderIneligibleBrokerId)
+    if (candidates.isEmpty) {
+      throw new NoReplicaOnlineException(("No replica for partition " +
+        "%s is alive. Live brokers are: [%s],".format(topicAndPartition, controllerContext.liveBrokerIds)) +
+        " Assigned replicas are: [%s]".format(assignedReplicas) +
+        " Ineligible replicas are: [%s]".format(controllerContext.leaderIneligibleBrokerId))
+    }
+    val preferredReplica = candidates.head
     // check if preferred replica is the current leader
     val currentLeader = controllerContext.partitionLeadershipInfo(topicAndPartition).leaderAndIsr.leader
     if (currentLeader == preferredReplica) {
@@ -176,7 +191,7 @@ class ControlledShutdownLeaderSelector(controllerContext: ControllerContext) ext
     val assignedReplicas = controllerContext.partitionReplicaAssignment(topicAndPartition)
     val liveAssignedReplicas = assignedReplicas.filter(r => controllerContext.isReplicaOnline(r, topicAndPartition, true))
 
-    val newIsr = currentIsr.filter(brokerId => !controllerContext.shuttingDownBrokerIds.contains(brokerId))
+    val newIsr = currentIsr.filter(brokerId => !controllerContext.shuttingDownBrokerIds.contains(brokerId) && brokerId != controllerContext.leaderIneligibleBrokerId)
     liveAssignedReplicas.find(newIsr.contains) match {
       case Some(newLeader) =>
         debug(s"Partition $topicAndPartition : current leader = ${currentLeaderAndIsr.leader}, new leader = $newLeader")
