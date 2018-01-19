@@ -189,7 +189,6 @@ abstract class AbstractIndex[K, V](@volatile var file: File, val baseOffset: Lon
   /** Close the index */
   def close() {
     trimToValidSize()
-    //THIS MAY NOT BE NEEDED BECAUSE OF CLOSEHANDLER METHOD
     inLock(lock) {
       if (OperatingSystem.IS_WINDOWS) forceUnmap()
     }

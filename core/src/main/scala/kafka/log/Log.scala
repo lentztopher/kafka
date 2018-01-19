@@ -79,7 +79,7 @@ case class LogAppendInfo(var firstOffset: Long,
                          var logAppendTime: Long,
                          var logStartOffset: Long,
                          var recordsProcessingStats: RecordsProcessingStats,
-                         sourceCodec: CompressionCodec,
+                         sourceCodec: CompressionCodec,s
                          targetCodec: CompressionCodec,
                          shallowCount: Int,
                          validBytes: Int,
@@ -194,6 +194,7 @@ class Log(@volatile var dir: File,
 
   /* the actual segments of the log */
   private val segments: ConcurrentNavigableMap[java.lang.Long, LogSegment] = new ConcurrentSkipListMap[java.lang.Long, LogSegment]
+  private val deletedSegments: ConcurrentNavigableMap[java.lang.Long, LogSegment] = new ConcurrentSkipListMap[java.lang.Long, LogSegment]
 
   val leaderEpochCache: LeaderEpochCache = initializeLeaderEpochCache()
 
@@ -332,8 +333,9 @@ class Log(@volatile var dir: File,
             case e: java.lang.IllegalArgumentException =>
               warn(s"Found a corrupted index file due to ${e.getMessage}}. deleting ${timeIndexFile.getAbsolutePath}, " +
                 s"${indexFile.getAbsolutePath}, and ${txnIndexFile.getAbsolutePath} and rebuilding index...")
-              Files.deleteIfExists(timeIndexFile.toPath)
-              Files.delete(indexFile.toPath)
+
+              segment.timeIndex.truncate()
+              segment.index.truncate()
               segment.txnIndex.delete()
               recoverSegment(segment)
           }
@@ -571,6 +573,7 @@ class Log(@volatile var dir: File,
         // (the clean shutdown file is written after the logs are all closed).
         producerStateManager.takeSnapshot()
         logSegments.foreach(_.close())
+        deletedLogSegments.foreach(_.close())
       }
     }
   }
@@ -582,6 +585,7 @@ class Log(@volatile var dir: File,
     debug(s"Closing handlers of log $name")
     lock synchronized {
       logSegments.foreach(_.closeHandlers())
+      deletedLogSegments.foreach(_.closeHandlers())
       isMemoryMappedBufferClosed = true
     }
   }
@@ -1435,6 +1439,10 @@ class Log(@volatile var dir: File,
         checkIfMemoryMappedBufferClosed()
         logSegments.foreach(_.delete())
         segments.clear()
+        deletedLogSegments.foreach(segment => {
+          val segmentToDelete = deletedSegments.remove(segment.baseOffset)
+          if (segmentToDelete != null) segmentToDelete.delete()
+        })
         leaderEpochCache.clear()
         Utils.delete(dir)
         // File handlers will be closed if this log is deleted
@@ -1547,7 +1555,7 @@ class Log(@volatile var dir: File,
    * All the log segments in this log ordered from oldest to newest
    */
   def logSegments: Iterable[LogSegment] = segments.values.asScala
-
+  def deletedLogSegments: Iterable[LogSegment] = deletedSegments.values.asScala
   /**
    * Get all segments beginning with the segment that includes "from" and ending with the segment
    * that includes up to "to-1" or the end of the log (if to > logEndOffset)
@@ -1583,6 +1591,7 @@ class Log(@volatile var dir: File,
     info("Scheduling log segment %d for log %s for deletion.".format(segment.baseOffset, name))
     lock synchronized {
       segments.remove(segment.baseOffset)
+      deletedSegments.put(segment.baseOffset, segment)
       asyncDeleteSegment(segment)
     }
   }
@@ -1600,7 +1609,8 @@ class Log(@volatile var dir: File,
     def deleteSeg() {
       info("Deleting segment %d from log %s.".format(segment.baseOffset, name))
       maybeHandleIOException(s"Error while deleting segments for $topicPartition in dir ${dir.getParent}") {
-        segment.delete()
+        val segmentToDelete = deletedSegments.remove(segment.baseOffset)
+        if(segmentToDelete != null) segmentToDelete.delete()
       }
     }
     scheduler.schedule("delete-file", deleteSeg _, delay = config.fileDeleteDelayMs)
