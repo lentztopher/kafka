@@ -16,23 +16,23 @@
  */
 package org.apache.kafka.common.record;
 
-import org.apache.kafka.common.KafkaException;
-import org.apache.kafka.common.network.TransportLayer;
-import org.apache.kafka.common.record.FileLogInputStream.FileChannelRecordBatch;
-import org.apache.kafka.common.utils.Time;
-import org.apache.kafka.common.utils.Utils;
-
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
+import java.nio.file.StandardOpenOption;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.kafka.common.KafkaException;
+import org.apache.kafka.common.network.TransportLayer;
+import org.apache.kafka.common.record.FileLogInputStream.FileChannelRecordBatch;
+import org.apache.kafka.common.utils.Time;
+import org.apache.kafka.common.utils.Utils;
 
 /**
  * A {@link Records} implementation backed by a file. An optional start and end position can be applied to this
@@ -408,18 +408,19 @@ public class FileRecords extends AbstractRecords implements Closeable {
                                            boolean preallocate) throws IOException {
         if (mutable) {
             if (fileAlreadyExists) {
-                return new RandomAccessFile(file, "rw").getChannel();
+                return FileChannel.open(file.toPath(), StandardOpenOption.WRITE, StandardOpenOption.READ);
             } else {
                 if (preallocate) {
-                    RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
-                    randomAccessFile.setLength(initFileSize);
-                    return randomAccessFile.getChannel();
+                    try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");) {
+                        randomAccessFile.setLength(initFileSize);
+                    }
+                    return FileChannel.open(file.toPath(), StandardOpenOption.WRITE, StandardOpenOption.READ);
                 } else {
-                    return new RandomAccessFile(file, "rw").getChannel();
+                    return FileChannel.open(file.toPath(), StandardOpenOption.WRITE, StandardOpenOption.READ, StandardOpenOption.CREATE);
                 }
             }
         } else {
-            return new FileInputStream(file).getChannel();
+            return FileChannel.open(file.toPath(), StandardOpenOption.READ);
         }
     }
 
