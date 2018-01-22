@@ -57,6 +57,15 @@ class LogSegment(val log: FileRecords,
                  val rollJitterMs: Long,
                  time: Time) extends Logging {
 
+  /*
+    This uuid is used to identify distinct log segments for log cleaning and deleteion.
+    There is a scenario wherein the cleaner can repeatedly try to delete a cleaned segment with the same base offset.
+    On Windows this leads to a filename collision and prevents cleaning from occurring.
+    To support Windows, we also need to track segments that have been marked for deletion in order to make sure they
+    are cleaned up correctly.
+   */
+  val uuid = java.util.UUID.randomUUID()
+
   private var created = time.milliseconds
 
   /* the number of bytes since we last added an entry in the offset index */

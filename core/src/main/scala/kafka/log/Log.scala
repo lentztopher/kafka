@@ -79,7 +79,7 @@ case class LogAppendInfo(var firstOffset: Long,
                          var logAppendTime: Long,
                          var logStartOffset: Long,
                          var recordsProcessingStats: RecordsProcessingStats,
-                         sourceCodec: CompressionCodec,s
+                         sourceCodec: CompressionCodec,
                          targetCodec: CompressionCodec,
                          shallowCount: Int,
                          validBytes: Int,
@@ -194,7 +194,7 @@ class Log(@volatile var dir: File,
 
   /* the actual segments of the log */
   private val segments: ConcurrentNavigableMap[java.lang.Long, LogSegment] = new ConcurrentSkipListMap[java.lang.Long, LogSegment]
-  private val deletedSegments: ConcurrentNavigableMap[java.lang.Long, LogSegment] = new ConcurrentSkipListMap[java.lang.Long, LogSegment]
+  private val deletedSegments: ConcurrentNavigableMap[java.util.UUID, LogSegment] = new ConcurrentSkipListMap[java.util.UUID, LogSegment]
 
   val leaderEpochCache: LeaderEpochCache = initializeLeaderEpochCache()
 
@@ -1440,7 +1440,7 @@ class Log(@volatile var dir: File,
         logSegments.foreach(_.delete())
         segments.clear()
         deletedLogSegments.foreach(segment => {
-          val segmentToDelete = deletedSegments.remove(segment.baseOffset)
+          val segmentToDelete = deletedSegments.remove(segment.uuid)
           if (segmentToDelete != null) segmentToDelete.delete()
         })
         leaderEpochCache.clear()
@@ -1591,7 +1591,6 @@ class Log(@volatile var dir: File,
     info("Scheduling log segment %d for log %s for deletion.".format(segment.baseOffset, name))
     lock synchronized {
       segments.remove(segment.baseOffset)
-      deletedSegments.put(segment.baseOffset, segment)
       asyncDeleteSegment(segment)
     }
   }
@@ -1605,11 +1604,14 @@ class Log(@volatile var dir: File,
    * @throws IOException if the file can't be renamed and still exists
    */
   private def asyncDeleteSegment(segment: LogSegment) {
-    segment.changeFileSuffixes("", Log.DeletedFileSuffix)
+
+    deletedSegments.put(segment.uuid, segment)
+    val suffix = "." + segment.uuid + Log.DeletedFileSuffix
+    segment.changeFileSuffixes("", suffix)
     def deleteSeg() {
-      info("Deleting segment %d from log %s.".format(segment.baseOffset, name))
+      info("Deleting segment %d with uuid %sfrom log %s.".format(segment.baseOffset, segment.uuid, name))
       maybeHandleIOException(s"Error while deleting segments for $topicPartition in dir ${dir.getParent}") {
-        val segmentToDelete = deletedSegments.remove(segment.baseOffset)
+        val segmentToDelete = deletedSegments.remove(segment.uuid)
         if(segmentToDelete != null) segmentToDelete.delete()
       }
     }
