@@ -26,8 +26,9 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.internals.ErrorLoggingCallback
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.security.auth.SecurityProtocol
+import org.apache.kafka.common.utils.OperatingSystem
 import org.junit.Assert._
-import org.junit.Test
+import org.junit.{Assume, Before, Test}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -71,6 +72,12 @@ class TransactionsBounceTest extends KafkaServerTestHarness {
   override def generateConfigs = {
     FixedPortTestUtils.createBrokerConfigs(numServers, zkConnect,enableControlledShutdown = true)
       .map(KafkaConfig.fromProps(_, overridingProps))
+  }
+
+  @Before
+  def setup(): Unit = {
+    Assume.assumeFalse("Transactions not supported on Windows", OperatingSystem.IS_WINDOWS)
+    super.setUp()
   }
 
   @Test

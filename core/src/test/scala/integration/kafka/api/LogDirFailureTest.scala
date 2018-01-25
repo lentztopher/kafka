@@ -25,9 +25,9 @@ import kafka.utils.{CoreUtils, TestUtils, ZkUtils}
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 import org.apache.kafka.common.TopicPartition
-import org.apache.kafka.common.utils.Utils
+import org.apache.kafka.common.utils.{OperatingSystem, Utils}
 import org.apache.kafka.common.errors.{KafkaStorageException, NotLeaderForPartitionException}
-import org.junit.{Before, Test}
+import org.junit.{Assume, Before, Test}
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertEquals
 
@@ -97,6 +97,7 @@ class LogDirFailureTest extends IntegrationTestHarness {
   }
 
   def testProduceAfterLogDirFailureOnLeader(failureType: LogDirFailureType) {
+    Assume.assumeFalse("This test is not relevant on Windows", OperatingSystem.IS_WINDOWS)
     val consumer = consumers.head
     subscribeAndWaitForAssignment(topic, consumer)
     val producer = producers.head
