@@ -122,6 +122,9 @@ public class StreamThreadStateStoreProviderTest {
 
     @After
     public void cleanUp() throws IOException {
+        for (Task task : tasks.values()) {
+            task.close(false, false);
+        }
         Utils.delete(stateDir);
     }
     
