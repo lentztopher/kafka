@@ -31,7 +31,7 @@ import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.errors.ProducerFencedException
 import org.apache.kafka.common.security.auth.SecurityProtocol
 import org.apache.kafka.common.utils.OperatingSystem
-import org.junit.{After, Assume, Before, Test}
+import org.junit._
 import org.junit.Assert._
 
 import scala.collection.JavaConverters._
@@ -57,7 +57,6 @@ class TransactionsTest extends KafkaServerTestHarness {
 
   @Before
   override def setUp(): Unit = {
-    Assume.assumeFalse("Transactions not supported on Windows", OperatingSystem.IS_WINDOWS)
     super.setUp()
     val numPartitions = 4
     val topicConfig = new Properties()
@@ -587,4 +586,11 @@ class TransactionsTest extends KafkaServerTestHarness {
     producer
   }
 
+}
+
+object TransactionsTest {
+  @BeforeClass
+  def setupClass() {
+    Assume.assumeFalse("Transactions not supported on Windows", OperatingSystem.IS_WINDOWS)
+  }
 }
