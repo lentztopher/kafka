@@ -48,7 +48,7 @@ class EmbeddedZookeeper() {
     }
 
     Iterator.continually(isDown()).exists(identity)
-
+    zookeeper.getTxnLogFactory.close()
     Utils.delete(logDir)
     Utils.delete(snapshotDir)
   }

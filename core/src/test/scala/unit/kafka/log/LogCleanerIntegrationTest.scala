@@ -121,6 +121,8 @@ class LogCleanerIntegrationTest(compressionCodec: String) extends AbstractLogCle
     assertEquals(1, log.numberOfSegments)
 
     cleaner.shutdown()
+    this.logs.foreach(_.close())
+    this.logs.clear()
 
     // run the cleaner again to make sure if there are no issues post deletion
     val (log2, messages) = runCleanerAndCheckCompacted(20)
