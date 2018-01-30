@@ -16,10 +16,9 @@
  */
 package org.apache.kafka.connect.runtime.isolation;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -29,9 +28,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import org.apache.kafka.common.utils.OperatingSystem;
+import org.junit.Assume;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 public class PluginUtilsTest {
     @Rule
@@ -191,6 +193,7 @@ public class PluginUtilsTest {
 
     @Test
     public void testPluginUrlsWithAbsoluteSymlink() throws Exception {
+        Assume.assumeFalse("Symbolic links do not work on Windows", OperatingSystem.IS_WINDOWS);
         createBasicDirectoryLayout();
 
         Path anotherPath = rootDir.newFolder("moreplugins").toPath().toRealPath();
@@ -208,6 +211,8 @@ public class PluginUtilsTest {
 
     @Test
     public void testPluginUrlsWithRelativeSymlinkBackwards() throws Exception {
+
+        Assume.assumeFalse("Symbolic links do not work on Windows", OperatingSystem.IS_WINDOWS);
         createBasicDirectoryLayout();
 
         Path anotherPath = rootDir.newFolder("moreplugins").toPath().toRealPath();
@@ -225,6 +230,7 @@ public class PluginUtilsTest {
 
     @Test
     public void testPluginUrlsWithRelativeSymlinkForwards() throws Exception {
+        Assume.assumeFalse("Symbolic links do not work on Windows", OperatingSystem.IS_WINDOWS);
         // Since this test case defines a relative symlink within an already included path, the main
         // assertion of this test is absence of exceptions and correct resolution of paths.
         createBasicDirectoryLayout();
