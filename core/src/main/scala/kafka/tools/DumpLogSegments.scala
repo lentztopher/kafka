@@ -432,6 +432,8 @@ object DumpLogSegments {
     val trailingBytes = messageSet.sizeInBytes - validBytes
     if(trailingBytes > 0)
       println("Found %d invalid bytes at the end of %s".format(trailingBytes, file.getName))
+
+    messageSet.close()
   }
 
   class TimeIndexDumpErrors {
