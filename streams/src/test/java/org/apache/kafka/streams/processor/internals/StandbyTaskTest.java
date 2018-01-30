@@ -16,6 +16,27 @@
  */
 package org.apache.kafka.streams.processor.internals;
 
+import static java.util.Collections.singleton;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -47,27 +68,6 @@ import org.apache.kafka.test.TestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import static java.util.Collections.singleton;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class StandbyTaskTest {
 
@@ -168,6 +168,7 @@ public class StandbyTaskTest {
         StandbyTask task = new StandbyTask(taskId, applicationId, topicPartitions, topology, consumer, changelogReader, config, null, stateDirectory);
         task.initialize();
         assertEquals(Utils.mkSet(partition2), new HashSet<>(task.checkpointedOffsets().keySet()));
+        task.close(false, false);
 
     }
 
@@ -386,7 +387,7 @@ public class StandbyTaskTest {
         final Map<TopicPartition, Long> checkpoint = new OffsetCheckpoint(new File(stateDirectory.directoryForTask(taskId),
                                                                                    ProcessorStateManager.CHECKPOINT_FILE_NAME)).read();
         assertThat(checkpoint, equalTo(Collections.singletonMap(ktable, 51L)));
-
+        task.close(false, false);
     }
 
     @Test
@@ -411,6 +412,7 @@ public class StandbyTaskTest {
                                                  null,
                                                  stateDirectory
         ) {
+
             @Override
             public void commit() {
                 throw new RuntimeException("KABOOM!");
@@ -418,6 +420,7 @@ public class StandbyTaskTest {
 
             @Override
             void closeStateManager(final boolean writeCheckpoint) throws ProcessorStateException {
+                super.closeStateManager(writeCheckpoint);
                 closedStateManager.set(true);
             }
         };

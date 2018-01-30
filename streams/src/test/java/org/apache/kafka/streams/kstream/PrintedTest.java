@@ -17,14 +17,8 @@
 
 package org.apache.kafka.streams.kstream;
 
-import org.apache.kafka.streams.errors.TopologyException;
-import org.apache.kafka.streams.kstream.internals.PrintedInternal;
-import org.apache.kafka.streams.processor.Processor;
-import org.apache.kafka.streams.processor.ProcessorSupplier;
-import org.apache.kafka.test.TestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.junit.Assert.assertThat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -34,8 +28,14 @@ import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.assertThat;
+import org.apache.kafka.streams.errors.TopologyException;
+import org.apache.kafka.streams.kstream.internals.PrintedInternal;
+import org.apache.kafka.streams.processor.Processor;
+import org.apache.kafka.streams.processor.ProcessorSupplier;
+import org.apache.kafka.test.TestUtils;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class PrintedTest {
 
@@ -65,7 +65,7 @@ public class PrintedTest {
         try (final FileInputStream stream = new FileInputStream(file)) {
             final byte[] data = new byte[stream.available()];
             stream.read(data);
-            assertThat(new String(data, StandardCharsets.UTF_8.name()), equalTo("[processor]: hi, 1\n"));
+            assertThat(new String(data, StandardCharsets.UTF_8.name()), equalTo("[processor]: hi, 1" + System.lineSeparator()));
         }
     }
 
@@ -73,7 +73,7 @@ public class PrintedTest {
     public void shouldCreateProcessorThatPrintsToStdOut() throws UnsupportedEncodingException {
         final ProcessorSupplier<String, Integer> supplier = new PrintedInternal<>(sysOutPrinter).build("processor");
         supplier.get().process("good", 2);
-        assertThat(sysOut.toString(StandardCharsets.UTF_8.name()), equalTo("[processor]: good, 2\n"));
+        assertThat(sysOut.toString(StandardCharsets.UTF_8.name()), equalTo("[processor]: good, 2" + System.lineSeparator()));
     }
 
     @Test
@@ -83,7 +83,7 @@ public class PrintedTest {
                 .get();
 
         processor.process("hello", 3);
-        assertThat(sysOut.toString(StandardCharsets.UTF_8.name()), equalTo("[label]: hello, 3\n"));
+        assertThat(sysOut.toString(StandardCharsets.UTF_8.name()), equalTo("[label]: hello, 3"  + System.lineSeparator()));
     }
 
     @Test
@@ -97,7 +97,7 @@ public class PrintedTest {
                 })).build("processor")
                 .get();
         processor.process("hello", 1);
-        assertThat(sysOut.toString(StandardCharsets.UTF_8.name()), equalTo("[processor]: hello -> 1\n"));
+        assertThat(sysOut.toString(StandardCharsets.UTF_8.name()), equalTo("[processor]: hello -> 1" + System.lineSeparator()));
     }
 
     @Test(expected = NullPointerException.class)

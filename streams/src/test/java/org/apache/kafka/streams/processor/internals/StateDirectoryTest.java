@@ -16,14 +16,11 @@
  */
 package org.apache.kafka.streams.processor.internals;
 
-import org.apache.kafka.common.utils.MockTime;
-import org.apache.kafka.common.utils.Utils;
-import org.apache.kafka.streams.errors.ProcessorStateException;
-import org.apache.kafka.streams.processor.TaskId;
-import org.apache.kafka.test.TestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,11 +33,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.apache.kafka.common.utils.MockTime;
+import org.apache.kafka.common.utils.Utils;
+import org.apache.kafka.streams.errors.ProcessorStateException;
+import org.apache.kafka.streams.processor.TaskId;
+import org.apache.kafka.test.TestUtils;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class StateDirectoryTest {
 
@@ -288,6 +288,7 @@ public class StateDirectoryTest {
         thread.join(30000);
         assertNull("should not have had an exception during locking on other thread", exceptionOnThread.get());
         assertFalse(directory.lock(taskId, 1));
+        directory.forceUnlock(taskId);
     }
 
     @Test
@@ -321,6 +322,7 @@ public class StateDirectoryTest {
 
         assertNull("should not have had an exception on other thread", exceptionOnThread.get());
         assertTrue(directory.lock(taskId, 1));
+        directory.unlock(taskId);
     }
 
 }

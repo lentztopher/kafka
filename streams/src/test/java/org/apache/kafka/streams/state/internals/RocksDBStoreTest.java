@@ -16,23 +16,12 @@
  */
 package org.apache.kafka.streams.state.internals;
 
-import org.apache.kafka.common.metrics.Metrics;
-import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.common.utils.LogContext;
-import org.apache.kafka.common.utils.Utils;
-import org.apache.kafka.streams.KeyValue;
-import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.errors.ProcessorStateException;
-import org.apache.kafka.streams.processor.internals.MockStreamsMetrics;
-import org.apache.kafka.streams.state.KeyValueIterator;
-import org.apache.kafka.streams.state.RocksDBConfigSetter;
-import org.apache.kafka.test.MockProcessorContext;
-import org.apache.kafka.test.NoOpRecordCollector;
-import org.apache.kafka.test.TestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.rocksdb.Options;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,12 +33,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.apache.kafka.common.metrics.Metrics;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.LogContext;
+import org.apache.kafka.common.utils.OperatingSystem;
+import org.apache.kafka.common.utils.Utils;
+import org.apache.kafka.streams.KeyValue;
+import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.errors.ProcessorStateException;
+import org.apache.kafka.streams.processor.internals.MockStreamsMetrics;
+import org.apache.kafka.streams.state.KeyValueIterator;
+import org.apache.kafka.streams.state.RocksDBConfigSetter;
+import org.apache.kafka.test.MockProcessorContext;
+import org.apache.kafka.test.NoOpRecordCollector;
+import org.apache.kafka.test.TestUtils;
+import org.junit.After;
+import org.junit.Assume;
+import org.junit.Before;
+import org.junit.Test;
+import org.rocksdb.Options;
 
 public class RocksDBStoreTest {
     private final File tempDir = TestUtils.tempDirectory();
@@ -109,6 +111,7 @@ public class RocksDBStoreTest {
 
     @Test(expected = ProcessorStateException.class)
     public void shouldThrowProcessorStateExceptionOnOpeningReadOnlyDir() throws IOException {
+        Assume.assumeFalse("Directories can not be set to readOnly on Windows", OperatingSystem.IS_WINDOWS);
         final File tmpDir = TestUtils.tempDirectory();
         MockProcessorContext tmpContext = new MockProcessorContext(tmpDir,
             Serdes.String(),
@@ -304,6 +307,7 @@ public class RocksDBStoreTest {
 
     @Test(expected = ProcessorStateException.class)
     public void shouldThrowProcessorStateExceptionOnPutDeletedDir() throws IOException {
+        Assume.assumeFalse("Directories can not be deleted while running on Windows", OperatingSystem.IS_WINDOWS);
         subject.init(context, subject);
         Utils.delete(dir);
         subject.put("anyKey", "anyValue");

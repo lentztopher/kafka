@@ -16,6 +16,15 @@
  */
 package org.apache.kafka.streams.state.internals;
 
+import static org.apache.kafka.streams.state.internals.Segments.SEGMENT_NAME_SEPARATOR;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.util.List;
+
 import org.apache.kafka.common.metrics.Metrics;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.LogContext;
@@ -26,14 +35,6 @@ import org.apache.kafka.test.TestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.io.File;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 public class SegmentsTest {
 
@@ -78,9 +79,9 @@ public class SegmentsTest {
 
     @Test
     public void shouldGetSegmentNameFromId() throws Exception {
-        assertEquals("test:0", segments.segmentName(0));
-        assertEquals("test:" + segmentInterval, segments.segmentName(1));
-        assertEquals("test:" + 2 * segmentInterval, segments.segmentName(2));
+        assertEquals("test" + SEGMENT_NAME_SEPARATOR + "0", segments.segmentName(0));
+        assertEquals("test" + SEGMENT_NAME_SEPARATOR + segmentInterval, segments.segmentName(1));
+        assertEquals("test" + SEGMENT_NAME_SEPARATOR + 2 * segmentInterval, segments.segmentName(2));
     }
 
     @Test
@@ -88,9 +89,9 @@ public class SegmentsTest {
         final Segment segment1 = segments.getOrCreateSegment(0, context);
         final Segment segment2 = segments.getOrCreateSegment(1, context);
         final Segment segment3 = segments.getOrCreateSegment(2, context);
-        assertTrue(new File(context.stateDir(), "test/test:0").isDirectory());
-        assertTrue(new File(context.stateDir(), "test/test:" + segmentInterval).isDirectory());
-        assertTrue(new File(context.stateDir(), "test/test:" + 2 * segmentInterval).isDirectory());
+        assertTrue(new File(context.stateDir(), "test/test" + SEGMENT_NAME_SEPARATOR + "0").isDirectory());
+        assertTrue(new File(context.stateDir(), "test/test" + SEGMENT_NAME_SEPARATOR + segmentInterval).isDirectory());
+        assertTrue(new File(context.stateDir(), "test/test" + SEGMENT_NAME_SEPARATOR + 2 * segmentInterval).isDirectory());
         assertEquals(true, segment1.isOpen());
         assertEquals(true, segment2.isOpen());
         assertEquals(true, segment3.isOpen());
@@ -100,7 +101,7 @@ public class SegmentsTest {
     public void shouldNotCreateSegmentThatIsAlreadyExpired() {
         segments.getOrCreateSegment(7, context);
         assertNull(segments.getOrCreateSegment(0, context));
-        assertFalse(new File(context.stateDir(), "test/test:0").exists());
+        assertFalse(new File(context.stateDir(), "test/test" + SEGMENT_NAME_SEPARATOR + "0").exists());
     }
 
     @Test
@@ -111,9 +112,9 @@ public class SegmentsTest {
         assertFalse(segment1.isOpen());
         assertFalse(segment2.isOpen());
         assertTrue(segment3.isOpen());
-        assertFalse(new File(context.stateDir(), "test/test:0").exists());
-        assertFalse(new File(context.stateDir(), "test/test:" + segmentInterval).exists());
-        assertTrue(new File(context.stateDir(), "test/test:" + 7 * segmentInterval).exists());
+        assertFalse(new File(context.stateDir(), "test/test" + SEGMENT_NAME_SEPARATOR + "0").exists());
+        assertFalse(new File(context.stateDir(), "test/test" + SEGMENT_NAME_SEPARATOR + segmentInterval).exists());
+        assertTrue(new File(context.stateDir(), "test/test" + SEGMENT_NAME_SEPARATOR + 7 * segmentInterval).exists());
     }
 
     @Test

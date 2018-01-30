@@ -16,13 +16,6 @@
  */
 package org.apache.kafka.streams.processor.internals;
 
-import org.apache.kafka.common.utils.Time;
-import org.apache.kafka.common.utils.Utils;
-import org.apache.kafka.streams.errors.ProcessorStateException;
-import org.apache.kafka.streams.processor.TaskId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
@@ -33,6 +26,14 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
+
+import org.apache.kafka.common.utils.OperatingSystem;
+import org.apache.kafka.common.utils.Time;
+import org.apache.kafka.common.utils.Utils;
+import org.apache.kafka.streams.errors.ProcessorStateException;
+import org.apache.kafka.streams.processor.TaskId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manages the directories where the state of Tasks owned by a {@link StreamThread} are
@@ -221,6 +222,23 @@ public class StateDirectory {
     }
 
     /**
+     * Forcibly unlock the state director.  Included for testing purposes only.
+     */
+    synchronized void forceUnlock(TaskId taskId) throws IOException {
+        final LockAndOwner lockAndOwner = locks.get(taskId);
+        if (lockAndOwner != null) {
+            locks.remove(taskId);
+            lockAndOwner.lock.release();
+            log.debug("{} Released state dir lock for task {}", logPrefix(), taskId);
+
+            final FileChannel fileChannel = channels.remove(taskId);
+            if (fileChannel != null) {
+                fileChannel.close();
+            }
+        }
+    }
+
+    /**
      * Remove the directories for any {@link TaskId}s that are no-longer
      * owned by this {@link StreamThread} and aren't locked by either
      * another process or another {@link StreamThread}
@@ -242,6 +260,9 @@ public class StateDirectory {
                         long lastModifiedMs = taskDir.lastModified();
                         if (now > lastModifiedMs + cleanupDelayMs) {
                             log.info("{} Deleting obsolete state directory {} for task {} as {}ms has elapsed (cleanup delay is {}ms)", logPrefix(), dirName, id, now - lastModifiedMs, cleanupDelayMs);
+                            //This is neccesary on Windows in order to release the .lock file
+                            //A better solution may be to support an asynch delete somehow
+                            if (OperatingSystem.IS_WINDOWS) unlock(id);
                             Utils.delete(taskDir);
                         }
                     }

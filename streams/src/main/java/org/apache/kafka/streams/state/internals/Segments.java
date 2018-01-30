@@ -16,12 +16,6 @@
  */
 package org.apache.kafka.streams.state.internals;
 
-import org.apache.kafka.streams.errors.InvalidStateStoreException;
-import org.apache.kafka.streams.errors.ProcessorStateException;
-import org.apache.kafka.streams.processor.ProcessorContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
@@ -34,12 +28,22 @@ import java.util.Map;
 import java.util.SimpleTimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.kafka.common.utils.OperatingSystem;
+import org.apache.kafka.streams.errors.InvalidStateStoreException;
+import org.apache.kafka.streams.errors.ProcessorStateException;
+import org.apache.kafka.streams.processor.ProcessorContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Manages the {@link Segment}s that are used by the {@link RocksDBSegmentedBytesStore}
  */
 class Segments {
     private static final Logger log = LoggerFactory.getLogger(Segments.class);
     static final long MIN_SEGMENT_INTERVAL = 60 * 1000L;
+
+    //Colons are not valid in filenames on Windows
+    static final String SEGMENT_NAME_SEPARATOR = OperatingSystem.IS_WINDOWS ? "_" : ":";
 
     static long segmentInterval(long retentionPeriod, int numSegments) {
         return Math.max(retentionPeriod / (numSegments - 1), MIN_SEGMENT_INTERVAL);
@@ -69,7 +73,7 @@ class Segments {
     String segmentName(final long segmentId) {
         // previous format used - as a separator so if this changes in the future
         // then we should use something different.
-        return name + ":" + segmentId * segmentInterval;
+        return name + SEGMENT_NAME_SEPARATOR + segmentId * segmentInterval;
     }
 
     Segment getSegmentForTimestamp(final long timestamp) {

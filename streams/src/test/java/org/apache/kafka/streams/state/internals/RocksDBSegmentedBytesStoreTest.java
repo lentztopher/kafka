@@ -16,6 +16,25 @@
  */
 package org.apache.kafka.streams.state.internals;
 
+import static org.apache.kafka.streams.state.internals.Segments.SEGMENT_NAME_SEPARATOR;
+import static org.apache.kafka.streams.state.internals.Segments.segmentInterval;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.SimpleTimeZone;
+
 import org.apache.kafka.common.metrics.Metrics;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
@@ -33,24 +52,6 @@ import org.apache.kafka.test.TestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.SimpleTimeZone;
-
-import static org.apache.kafka.streams.state.internals.Segments.segmentInterval;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 public class RocksDBSegmentedBytesStoreTest {
 
@@ -164,7 +165,7 @@ public class RocksDBSegmentedBytesStoreTest {
         bytesStore.close();
 
         final String firstSegmentName = segments.segmentName(0);
-        final String[] nameParts = firstSegmentName.split(":");
+        final String[] nameParts = firstSegmentName.split(SEGMENT_NAME_SEPARATOR);
         final Long segmentId = Long.parseLong(nameParts[1]);
         final SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmm");
         formatter.setTimeZone(new SimpleTimeZone(0, "UTC"));
