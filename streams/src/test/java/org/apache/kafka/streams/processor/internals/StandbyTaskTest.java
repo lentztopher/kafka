@@ -414,7 +414,9 @@ public class StandbyTaskTest {
         ) {
 
             @Override
-            public void commit() { throw new RuntimeException("KABOOM!"); }
+            public void commit() {
+                throw new RuntimeException("KABOOM!");
+            }
 
             @Override
             void closeStateManager(final boolean writeCheckpoint) throws ProcessorStateException {
