@@ -37,7 +37,7 @@ import scala.collection.Map
 import scala.collection.mutable.ArrayBuffer
 import kafka.utils._
 import org.apache.kafka.common.security.auth.SecurityProtocol
-import org.apache.kafka.common.utils.Time
+import org.apache.kafka.common.utils.{OperatingSystem, Time}
 
 @deprecated("This test has been deprecated and it will be removed in a future release.", "0.10.0.0")
 class AsyncProducerTest {
@@ -138,6 +138,7 @@ class AsyncProducerTest {
      *  Send a total of 2 messages with batch size of 5 and queue time of 200ms.
      *  Expect 1 calls to the handler after 200ms.
      */
+    val skew = if(OperatingSystem.IS_WINDOWS) 1000 else 100
     val producerDataList = getProduceData(2)
     val mockHandler = EasyMock.createStrictMock(classOf[DefaultEventHandler[String,String]])
     mockHandler.handle(producerDataList)
@@ -153,7 +154,7 @@ class AsyncProducerTest {
     for (producerData <- producerDataList)
       queue.put(producerData)
 
-    Thread.sleep(queueExpirationTime + 100)
+    Thread.sleep(queueExpirationTime + skew)
     EasyMock.verify(mockHandler)
     producerSendThread.shutdown
   }
