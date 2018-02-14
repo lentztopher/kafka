@@ -591,6 +591,6 @@ class TransactionsTest extends KafkaServerTestHarness {
 object TransactionsTest {
   @BeforeClass
   def setupClass() {
-    Assume.assumeFalse("Transactions not supported on Windows", OperatingSystem.IS_WINDOWS)
+    Assume.assumeFalse("Transactions not supported on Windows (KAFKA-6153)", OperatingSystem.IS_WINDOWS)
   }
 }

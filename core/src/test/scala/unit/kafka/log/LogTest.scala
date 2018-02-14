@@ -1795,7 +1795,6 @@ class LogTest {
       log.appendAsLeader(createRecords, leaderEpoch = 0)
 
     log.delete()
-    //TODO: Need to close before delete?
   }
 
   /**

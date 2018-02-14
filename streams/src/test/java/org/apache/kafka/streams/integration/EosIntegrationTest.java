@@ -16,23 +16,6 @@
  */
 package org.apache.kafka.streams.integration;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.requests.IsolationLevel;
 import org.apache.kafka.common.serialization.LongDeserializer;
@@ -66,6 +49,23 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @Category({IntegrationTest.class})
 public class EosIntegrationTest {
@@ -101,7 +101,7 @@ public class EosIntegrationTest {
 
     @BeforeClass
     public static void setupClass() {
-        Assume.assumeFalse("Transactions not supported on Windows", OperatingSystem.IS_WINDOWS);
+        Assume.assumeFalse("Transactions not supported on Windows (KAFKA-6153)", OperatingSystem.IS_WINDOWS);
     }
 
     @Before

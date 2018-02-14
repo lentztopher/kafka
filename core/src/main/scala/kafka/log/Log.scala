@@ -21,14 +21,14 @@ import java.io.{File, IOException}
 import java.nio.file.Files
 import java.text.NumberFormat
 import java.util.concurrent.atomic._
-import java.util.concurrent.{ConcurrentNavigableMap, ConcurrentSkipListMap, TimeUnit}
+import java.util.concurrent._
 
 import kafka.api.KAFKA_0_10_0_IV0
 import kafka.common.{InvalidOffsetException, KafkaException, LongRef}
 import kafka.metrics.KafkaMetricsGroup
 import kafka.server.{BrokerTopicStats, FetchDataInfo, LogDirFailureChannel, LogOffsetMetadata}
 import kafka.utils._
-import org.apache.kafka.common.errors.{CorruptRecordException, KafkaStorageException, OffsetOutOfRangeException, RecordBatchTooLargeException, RecordTooLargeException, UnsupportedForMessageFormatException}
+import org.apache.kafka.common.errors._
 import org.apache.kafka.common.record._
 import org.apache.kafka.common.requests.{IsolationLevel, ListOffsetRequest}
 
@@ -201,7 +201,7 @@ class Log(@volatile var dir: File,
     Entries are tracked via a UUID to prevent errors on Windows when a segment is repeatedly compacted and results in
     a name collision.
    */
-  private val deletedSegments: ConcurrentNavigableMap[java.util.UUID, LogSegment] = new ConcurrentSkipListMap[java.util.UUID, LogSegment]
+  private val deletedSegments: ConcurrentMap[java.util.UUID, LogSegment] = new ConcurrentHashMap[java.util.UUID, LogSegment]
 
   val leaderEpochCache: LeaderEpochCache = initializeLeaderEpochCache()
 
@@ -1620,7 +1620,7 @@ class Log(@volatile var dir: File,
     val suffix = "." + segment.uuid + Log.DeletedFileSuffix
     segment.changeFileSuffixes("", suffix)
     def deleteSeg() {
-      info("Deleting segment %d with uuid %sfrom log %s.".format(segment.baseOffset, segment.uuid, name))
+      info(s"Deleting segment ${segment.baseOffset} with uuid ${segment.uuid} from log $name.")
       maybeHandleIOException(s"Error while deleting segments for $topicPartition in dir ${dir.getParent}") {
         val segmentToDelete = deletedSegments.remove(segment.uuid)
         if(segmentToDelete != null) segmentToDelete.delete()
