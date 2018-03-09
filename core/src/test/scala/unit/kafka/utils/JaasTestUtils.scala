@@ -16,10 +16,11 @@
  */
 package kafka.utils
 
-import java.io.{File, BufferedWriter, FileWriter}
+import java.io.{BufferedWriter, File, FileWriter}
 import java.util.Properties
+
 import kafka.server.KafkaConfig
-import org.apache.kafka.common.utils.Java
+import org.apache.kafka.common.utils.{Java, OperatingSystem}
 
 object JaasTestUtils {
 
@@ -170,7 +171,9 @@ object JaasTestUtils {
         Krb5LoginModule(
           useKeyTab = true,
           storeKey = true,
-          keyTab = keytabLocation.getOrElse(throw new IllegalArgumentException("Keytab location not specified for GSSAPI")).getAbsolutePath,
+          keyTab = keytabLocation.map(f => f.getAbsolutePath)
+              .map(path => if (OperatingSystem.IS_WINDOWS) path.replace("\\", "/") else path)
+              .getOrElse(throw new IllegalArgumentException("Keytab location not specified for GSSAPI")),
           principal = KafkaServerPrincipal,
           debug = true,
           serviceName = Some(serviceName))
@@ -204,7 +207,9 @@ object JaasTestUtils {
         Krb5LoginModule(
           useKeyTab = true,
           storeKey = true,
-          keyTab = keytabLocation.getOrElse(throw new IllegalArgumentException("Keytab location not specified for GSSAPI")).getAbsolutePath,
+          keyTab = keytabLocation.map(f => f.getAbsolutePath)
+            .map(path => if (OperatingSystem.IS_WINDOWS) path.replace("\\", "/") else path)
+            .getOrElse(throw new IllegalArgumentException("Keytab location not specified for GSSAPI")),
           principal = clientPrincipal,
           debug = true,
           serviceName = Some(serviceName)

@@ -168,6 +168,7 @@ public class StandbyTaskTest {
         StandbyTask task = new StandbyTask(taskId, applicationId, topicPartitions, topology, consumer, changelogReader, config, null, stateDirectory);
         task.initialize();
         assertEquals(Utils.mkSet(partition2), new HashSet<>(task.checkpointedOffsets().keySet()));
+        task.close(false, false);
 
     }
 
@@ -386,7 +387,7 @@ public class StandbyTaskTest {
         final Map<TopicPartition, Long> checkpoint = new OffsetCheckpoint(new File(stateDirectory.directoryForTask(taskId),
                                                                                    ProcessorStateManager.CHECKPOINT_FILE_NAME)).read();
         assertThat(checkpoint, equalTo(Collections.singletonMap(ktable, 51L)));
-
+        task.close(false, false);
     }
 
     @Test
@@ -411,6 +412,7 @@ public class StandbyTaskTest {
                                                  null,
                                                  stateDirectory
         ) {
+
             @Override
             public void commit() {
                 throw new RuntimeException("KABOOM!");
@@ -418,6 +420,7 @@ public class StandbyTaskTest {
 
             @Override
             void closeStateManager(final boolean writeCheckpoint) throws ProcessorStateException {
+                super.closeStateManager(writeCheckpoint);
                 closedStateManager.set(true);
             }
         };

@@ -126,8 +126,25 @@ abstract class AbstractIndex[K, V](@volatile var file: File, val baseOffset: Lon
    * @throws IOException if rename fails
    */
   def renameTo(f: File) {
-    try Utils.atomicMoveWithFallback(file.toPath, f.toPath)
-    finally file = f
+    inLock(lock) {
+      val position = this.mmap.position()
+      if (OperatingSystem.IS_WINDOWS) forceUnmap()
+      try {
+        Utils.atomicMoveWithFallback(file.toPath, f.toPath)
+        if (OperatingSystem.IS_WINDOWS) {
+          val raf = new RandomAccessFile(f, "rw")
+          try {
+            val len = raf.length()
+            this.mmap = raf.getChannel.map(FileChannel.MapMode.READ_WRITE, 0, len)
+            this.mmap.position(position)
+          } finally {
+            CoreUtils.swallow(raf.close())
+          }
+        }
+      } finally {
+        file = f
+      }
+    }
   }
 
   /**
@@ -172,6 +189,9 @@ abstract class AbstractIndex[K, V](@volatile var file: File, val baseOffset: Lon
   /** Close the index */
   def close() {
     trimToValidSize()
+    inLock(lock) {
+      if (OperatingSystem.IS_WINDOWS) forceUnmap()
+    }
   }
 
   def closeHandler(): Unit = {

@@ -86,6 +86,7 @@ class LogCleanerTest extends JUnitSuite {
     val shouldRemain = keysInLog(log).filter(!keys.contains(_))
     assertEquals(shouldRemain, keysInLog(log))
     assertEquals(expectedBytesRead, stats.bytesRead)
+    log.close()
   }
 
   @Test
@@ -111,6 +112,7 @@ class LogCleanerTest extends JUnitSuite {
 
     assertTrue("Cleaned segment file should be trimmed to its real size.",
       log.logSegments.iterator.next.log.channel().size() < originalMaxFileSize)
+    log.close()
   }
 
   @Test
@@ -175,6 +177,7 @@ class LogCleanerTest extends JUnitSuite {
     logAppendInfo = appendIdempotentAsLeader(log, pid1, producerEpoch)(Seq(1, 2, 3))
     assertEquals(0L, logAppendInfo.firstOffset)
     assertEquals(2L, logAppendInfo.lastOffset)
+    log.close()
   }
 
   @Test
@@ -208,6 +211,7 @@ class LogCleanerTest extends JUnitSuite {
 
     // ensure the transaction index is still correct
     assertEquals(abortedTransactions, log.collectAbortedTransactions(log.logStartOffset, log.logEndOffset))
+    log.close()
   }
 
   @Test
@@ -254,6 +258,7 @@ class LogCleanerTest extends JUnitSuite {
     // finally only the keys from pid3 should remain
     cleaner.clean(LogToClean(new TopicPartition("test", 0), log, dirtyOffset, log.activeSegment.baseOffset))
     assertEquals(List(2, 3, 6, 7, 8, 9, 11, 12), keysInLog(log))
+    log.close()
   }
 
   @Test
@@ -298,6 +303,7 @@ class LogCleanerTest extends JUnitSuite {
     dirtyOffset = cleaner.doClean(LogToClean(tp, log, dirtyOffset, 100L), deleteHorizonMs = Long.MaxValue)._1
     assertEquals(List(2, 1, 3), keysInLog(log))
     assertEquals(List(4, 5, 6, 7, 8), offsetsInLog(log))
+    log.close()
   }
 
   @Test
@@ -345,6 +351,7 @@ class LogCleanerTest extends JUnitSuite {
     assertEquals(List(2, 3, 1), keysInLog(log))
     assertEquals(List(3, 4, 5), offsetsInLog(log)) // commit marker is gone
     assertEquals(List(3, 4, 5), lastOffsetsPerBatchInLog(log)) // empty batch is gone
+    log.close()
   }
 
   @Test
@@ -375,6 +382,7 @@ class LogCleanerTest extends JUnitSuite {
     cleaner.doClean(LogToClean(tp, log, dirtyOffset, 100L), deleteHorizonMs = Long.MaxValue)
     assertEquals(List(3), keysInLog(log))
     assertEquals(List(4, 5), offsetsInLog(log))
+    log.close()
   }
 
   @Test
@@ -434,6 +442,7 @@ class LogCleanerTest extends JUnitSuite {
 
     // we do not bother retaining the aborted transaction in the index
     assertEquals(0, log.collectAbortedTransactions(0L, 100L).size)
+    log.close()
   }
 
   /**
@@ -465,6 +474,7 @@ class LogCleanerTest extends JUnitSuite {
     cleaner.cleanSegments(log, Seq(log.logSegments.head), map, 0L, stats)
     val shouldRemain = keysInLog(log).filter(!keys.contains(_))
     assertEquals(shouldRemain, keysInLog(log))
+    log.close()
   }
 
   @Test
@@ -492,6 +502,7 @@ class LogCleanerTest extends JUnitSuite {
     val keys = keysInLog(log).toSet
     assertTrue("None of the keys we deleted should still exist.",
                (0 until leo.toInt by 2).forall(!keys.contains(_)))
+    log.close()
   }
 
   def testLogCleanerStats(): Unit = {
@@ -520,6 +531,7 @@ class LogCleanerTest extends JUnitSuite {
     assertEquals(log.size, stats.bytesWritten)
     assertEquals(0, stats.invalidMessagesRead)
     assertTrue(stats.endTime >= stats.startTime)
+    log.close()
   }
 
   @Test
@@ -543,6 +555,7 @@ class LogCleanerTest extends JUnitSuite {
     assertEquals(Map(1L -> 0, 2L -> 1, 3L -> 0), lastSequencesInLog(log))
     assertEquals(List(0, 1), keysInLog(log))
     assertEquals(List(3, 4), offsetsInLog(log))
+    log.close()
   }
 
   @Test
@@ -576,6 +589,7 @@ class LogCleanerTest extends JUnitSuite {
     assertEquals(Map(producerId -> 4), lastSequencesInLog(log))
     assertEquals(List(1, 5), keysInLog(log))
     assertEquals(List(3, 4, 5), offsetsInLog(log))
+    log.close()
   }
 
   @Test
@@ -608,6 +622,7 @@ class LogCleanerTest extends JUnitSuite {
     cleaner.clean(LogToClean(new TopicPartition("test", 0), log, 4, log.activeSegment.baseOffset))
     assertEquals(List(1,0), keysInLog(log))
     assertEquals(List(3,4), offsetsInLog(log))
+    log.close()
   }
 
   @Test
@@ -650,6 +665,7 @@ class LogCleanerTest extends JUnitSuite {
       disctinctValuesBySegmentBeforeClean.zip(distinctValuesBySegmentAfterClean).take(numCleanableSegments).forall { case (before, after) => after < before })
     assertTrue("The uncleanable segments should have the same number of values after cleaning", disctinctValuesBySegmentBeforeClean.zip(distinctValuesBySegmentAfterClean)
       .slice(numCleanableSegments, numTotalSegments).forall { x => x._1 == x._2 })
+    log.close()
   }
 
   @Test
@@ -668,6 +684,7 @@ class LogCleanerTest extends JUnitSuite {
 
     assertEquals("Total bytes of LogToClean should equal size of all segments excluding the active segment",
       logToClean.totalBytes, log.size - log.activeSegment.size)
+    log.close()
   }
 
   @Test
@@ -697,6 +714,7 @@ class LogCleanerTest extends JUnitSuite {
     assertEquals("Total bytes should be the sum of the clean and cleanable segments", logToClean.totalBytes, expectedCleanSize + expectedCleanableSize)
     assertEquals("Total cleanable ratio should be the ratio of cleanable size to clean plus cleanable", logToClean.cleanableRatio,
       expectedCleanableSize / (expectedCleanSize + expectedCleanableSize).toDouble, 1.0e-6d)
+    log.close()
   }
 
   @Test
@@ -727,6 +745,7 @@ class LogCleanerTest extends JUnitSuite {
     assertEquals("Log should only contain keyed messages after cleaning.", 0, unkeyedMessageCountInLog(log))
     assertEquals("Log should only contain keyed messages after cleaning.", expectedSizeAfterCleaning, log.size)
     assertEquals("Cleaner should have seen %d invalid messages.", numInvalidMessages, stats.invalidMessagesRead)
+    log.close()
   }
 
   /* extract all the keys from a log */
@@ -780,6 +799,7 @@ class LogCleanerTest extends JUnitSuite {
     intercept[LogCleaningAbortedException] {
       cleaner.cleanSegments(log, log.logSegments.take(3).toSeq, map, 0L, new CleanerStats())
     }
+    log.close()
   }
 
   /**
@@ -830,6 +850,7 @@ class LogCleanerTest extends JUnitSuite {
     groups = cleaner.groupSegmentsBySize(log.logSegments, maxSize = Int.MaxValue, maxIndexSize = indexSize, log.logEndOffset)
     checkSegmentOrder(groups)
     assertTrue("All but the last group should be the target size.", groups.dropRight(1).forall(_.size == groupSize))
+    log.close()
   }
 
   /**
@@ -879,6 +900,7 @@ class LogCleanerTest extends JUnitSuite {
     for (group <- groups)
       assertTrue("Relative offset greater than Int.MaxValue", group.last.index.lastOffset - group.head.index.baseOffset <= Int.MaxValue)
     checkSegmentOrder(groups)
+    log.close()
   }
 
   /**
@@ -921,6 +943,7 @@ class LogCleanerTest extends JUnitSuite {
     for (group <- groups)
       assertTrue("Relative offset greater than Int.MaxValue", group.last.nextOffset() - 1 - group.head.baseOffset <= Int.MaxValue)
     checkSegmentOrder(groups)
+    log.close()
   }
 
   private def checkSegmentOrder(groups: Seq[Seq[LogSegment]]): Unit = {
@@ -957,6 +980,7 @@ class LogCleanerTest extends JUnitSuite {
     checkRange(map, 0, segments(1).baseOffset.toInt)
     checkRange(map, segments(1).baseOffset.toInt, segments(3).baseOffset.toInt)
     checkRange(map, segments(3).baseOffset.toInt, log.logEndOffset.toInt)
+    log.close()
   }
 
   /**
@@ -977,6 +1001,16 @@ class LogCleanerTest extends JUnitSuite {
     logProps.put(LogConfig.FileDeleteDelayMsProp, 10: java.lang.Integer)
 
     val config = LogConfig.fromProps(logConfig.originals, logProps)
+
+    def getDeletedFileSuffix(f: File): String = {
+      val nameParts = f.getName.split("\\.")
+      var suffix = ""
+
+      if("." + nameParts.last == Log.DeletedFileSuffix)
+        suffix =  "." + nameParts(2) + "." + nameParts(3)
+
+      return suffix
+    }
 
     def recoverAndCheck(config: LogConfig, expectedKeys : Iterable[Int]) : Log = {
       // Recover log file and check that after recovery, keys are as expected
@@ -1013,8 +1047,9 @@ class LogCleanerTest extends JUnitSuite {
     // 1) Simulate recovery just after .cleaned file is created, before rename to .swap
     //    On recovery, clean operation is aborted. All messages should be present in the log
     log.logSegments.head.changeFileSuffixes("", Log.CleanedFileSuffix)
+    log.close()
     for (file <- dir.listFiles if file.getName.endsWith(Log.DeletedFileSuffix)) {
-      Utils.atomicMoveWithFallback(file.toPath, Paths.get(CoreUtils.replaceSuffix(file.getPath, Log.DeletedFileSuffix, "")))
+      Utils.atomicMoveWithFallback(file.toPath, Paths.get(CoreUtils.replaceSuffix(file.getPath, getDeletedFileSuffix(file), "")))
     }
     log = recoverAndCheck(config, allKeys)
 
@@ -1025,8 +1060,9 @@ class LogCleanerTest extends JUnitSuite {
     // 2) Simulate recovery just after swap file is created, before old segment files are
     //    renamed to .deleted. Clean operation is resumed during recovery.
     log.logSegments.head.changeFileSuffixes("", Log.SwapFileSuffix)
+    log.close()
     for (file <- dir.listFiles if file.getName.endsWith(Log.DeletedFileSuffix)) {
-      Utils.atomicMoveWithFallback(file.toPath, Paths.get(CoreUtils.replaceSuffix(file.getPath, Log.DeletedFileSuffix, "")))
+      Utils.atomicMoveWithFallback(file.toPath, Paths.get(CoreUtils.replaceSuffix(file.getPath, getDeletedFileSuffix(file), "")))
     }
     log = recoverAndCheck(config, cleanedKeys)
 
@@ -1043,6 +1079,7 @@ class LogCleanerTest extends JUnitSuite {
     // 3) Simulate recovery after swap file is created and old segments files are renamed
     //    to .deleted. Clean operation is resumed during recovery.
     log.logSegments.head.changeFileSuffixes("", Log.SwapFileSuffix)
+    log.close()
     log = recoverAndCheck(config, cleanedKeys)
 
     // add some more messages and clean the log again
@@ -1057,7 +1094,9 @@ class LogCleanerTest extends JUnitSuite {
 
     // 4) Simulate recovery after swap is complete, but async deletion
     //    is not yet complete. Clean operation is resumed during recovery.
-    recoverAndCheck(config, cleanedKeys)
+    log.close()
+    log = recoverAndCheck(config, cleanedKeys)
+    log.close()
   }
 
   @Test
@@ -1080,6 +1119,7 @@ class LogCleanerTest extends JUnitSuite {
     assertEquals("Should have the expected number of messages in the map.", end - start, map.size)
     assertEquals("Map should contain first value", 0L, map.get(key(0)))
     assertEquals("Map should contain second value", 7206178L, map.get(key(1)))
+    log.close()
   }
 
   /**
@@ -1107,6 +1147,7 @@ class LogCleanerTest extends JUnitSuite {
     assertEquals(3, map.get(key(3)))
     assertEquals(-1, map.get(key(4)))
     assertEquals(4, stats.mapMessagesRead)
+    log.close()
   }
 
   /**
@@ -1148,6 +1189,7 @@ class LogCleanerTest extends JUnitSuite {
       val value = TestUtils.readString(record.value).toLong
       assertEquals(record.offset, value)
     }
+    log.close()
   }
 
   /**
@@ -1199,6 +1241,7 @@ class LogCleanerTest extends JUnitSuite {
     log.roll()
     cleaner.clean(LogToClean(new TopicPartition("test", 0), log, 2, log.activeSegment.baseOffset))
     assertEquals("The tombstone should be retained.", 1, log.logSegments.head.log.batches.iterator.next().lastOffset)
+    log.close()
   }
 
   private def writeToLog(log: Log, keysAndValues: Iterable[(Int, Int)], offsetSeq: Iterable[Long]): Iterable[Long] = {

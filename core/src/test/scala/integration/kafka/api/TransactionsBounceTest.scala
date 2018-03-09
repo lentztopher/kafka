@@ -26,8 +26,9 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.internals.ErrorLoggingCallback
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.security.auth.SecurityProtocol
+import org.apache.kafka.common.utils.OperatingSystem
 import org.junit.Assert._
-import org.junit.Test
+import org.junit.{Assume, Before, Test}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -75,6 +76,7 @@ class TransactionsBounceTest extends KafkaServerTestHarness {
 
   @Test
   def testBrokerFailure() {
+    Assume.assumeFalse("Transactions not supported on Windows (KAFKA-6153)", OperatingSystem.IS_WINDOWS)
     // basic idea is to seed a topic with 10000 records, and copy it transactionally while bouncing brokers
     // constantly through the period.
     val consumerGroup = "myGroup"

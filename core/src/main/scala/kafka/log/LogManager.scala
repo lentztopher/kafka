@@ -196,15 +196,20 @@ class LogManager(logDirs: Seq[File],
    * Lock all the given directories
    */
   private def lockLogDirs(dirs: Seq[File]): Seq[FileLock] = {
+    val locks = mutable.ArrayBuffer.empty[FileLock]
     dirs.flatMap { dir =>
       try {
         val lock = new FileLock(new File(dir, LockFile))
-        if (!lock.tryLock())
+        if (!lock.tryLock()) {
+          lock.destroy()
           throw new KafkaException("Failed to acquire lock on file .lock in " + lock.file.getParent +
             ". A Kafka instance in another process or thread is using this directory.")
+        }
+        locks += lock
         Some(lock)
       } catch {
         case e: IOException =>
+          locks.foreach(_.destroy())
           logDirFailureChannel.maybeAddOfflineLogDir(dir.getAbsolutePath, s"Disk error while locking directory $dir", e)
           None
       }
@@ -429,7 +434,7 @@ class LogManager(logDirs: Seq[File],
     } finally {
       threadPools.foreach(_.shutdown())
       // regardless of whether the close succeeded, we need to unlock the data directories
-      dirLocks.foreach(_.destroy())
+      dirLocks.foreach(lock => CoreUtils.swallow(lock.destroy()))
     }
 
     info("Shutdown complete.")

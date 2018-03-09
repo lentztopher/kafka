@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.SimpleTimeZone;
 
+import static org.apache.kafka.streams.state.internals.Segments.SEGMENT_NAME_SEPARATOR;
 import static org.apache.kafka.streams.state.internals.Segments.segmentInterval;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -164,7 +165,7 @@ public class RocksDBSegmentedBytesStoreTest {
         bytesStore.close();
 
         final String firstSegmentName = segments.segmentName(0);
-        final String[] nameParts = firstSegmentName.split(":");
+        final String[] nameParts = firstSegmentName.split(SEGMENT_NAME_SEPARATOR);
         final Long segmentId = Long.parseLong(nameParts[1]);
         final SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmm");
         formatter.setTimeZone(new SimpleTimeZone(0, "UTC"));

@@ -288,6 +288,7 @@ public class StateDirectoryTest {
         thread.join(30000);
         assertNull("should not have had an exception during locking on other thread", exceptionOnThread.get());
         assertFalse(directory.lock(taskId, 1));
+        directory.forceUnlock(taskId);
     }
 
     @Test
@@ -321,6 +322,7 @@ public class StateDirectoryTest {
 
         assertNull("should not have had an exception on other thread", exceptionOnThread.get());
         assertTrue(directory.lock(taskId, 1));
+        directory.unlock(taskId);
     }
 
 }

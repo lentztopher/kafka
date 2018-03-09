@@ -30,7 +30,8 @@ import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.errors.ProducerFencedException
 import org.apache.kafka.common.security.auth.SecurityProtocol
-import org.junit.{After, Before, Test}
+import org.apache.kafka.common.utils.OperatingSystem
+import org.junit._
 import org.junit.Assert._
 
 import scala.collection.JavaConverters._
@@ -585,4 +586,11 @@ class TransactionsTest extends KafkaServerTestHarness {
     producer
   }
 
+}
+
+object TransactionsTest {
+  @BeforeClass
+  def setupClass() {
+    Assume.assumeFalse("Transactions not supported on Windows (KAFKA-6153)", OperatingSystem.IS_WINDOWS)
+  }
 }

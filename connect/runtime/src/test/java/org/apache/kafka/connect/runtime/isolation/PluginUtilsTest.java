@@ -16,6 +16,8 @@
  */
 package org.apache.kafka.connect.runtime.isolation;
 
+import org.apache.kafka.common.utils.OperatingSystem;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -191,6 +193,7 @@ public class PluginUtilsTest {
 
     @Test
     public void testPluginUrlsWithAbsoluteSymlink() throws Exception {
+        Assume.assumeFalse("Symbolic links do not work on Windows", OperatingSystem.IS_WINDOWS);
         createBasicDirectoryLayout();
 
         Path anotherPath = rootDir.newFolder("moreplugins").toPath().toRealPath();
@@ -208,6 +211,8 @@ public class PluginUtilsTest {
 
     @Test
     public void testPluginUrlsWithRelativeSymlinkBackwards() throws Exception {
+
+        Assume.assumeFalse("Symbolic links do not work on Windows", OperatingSystem.IS_WINDOWS);
         createBasicDirectoryLayout();
 
         Path anotherPath = rootDir.newFolder("moreplugins").toPath().toRealPath();
@@ -225,6 +230,7 @@ public class PluginUtilsTest {
 
     @Test
     public void testPluginUrlsWithRelativeSymlinkForwards() throws Exception {
+        Assume.assumeFalse("Symbolic links do not work on Windows", OperatingSystem.IS_WINDOWS);
         // Since this test case defines a relative symlink within an already included path, the main
         // assertion of this test is absence of exceptions and correct resolution of paths.
         createBasicDirectoryLayout();

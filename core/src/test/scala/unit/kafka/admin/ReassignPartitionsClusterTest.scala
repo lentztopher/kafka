@@ -89,7 +89,9 @@ class ReassignPartitionsClusterTest extends ZooKeeperTestHarness with Logging {
     createTopic(zkUtils, topicName, Map(partition -> Seq(100)), servers = servers)
 
     //When we move the replica on 100 to broker 101
-    val topicJson: String = s"""{"version":1,"partitions":[{"topic":"$topicName","partition":0,"replicas":[101],"log_dirs":["$expectedLogDir"]}]}"""
+    val topicJson: String =
+      s"""{"version":1,"partitions":[{"topic":"$topicName","partition":0,"replicas":[101],
+         |"log_dirs":["${expectedLogDir.replace("\\","\\\\")}"]}]}""".stripMargin
     ReassignPartitionsCommand.executeAssignment(zkUtils, Some(adminClient), topicJson, NoThrottle)
     waitForReassignmentToComplete()
 
@@ -119,7 +121,7 @@ class ReassignPartitionsClusterTest extends ZooKeeperTestHarness with Logging {
     // Find a partition on broker 102
     val partition = newAssignment.find { case (replica, brokerIds) => brokerIds.contains(102)}.get._1.partition
     val replica = new TopicPartitionReplica(topicName, partition, 102)
-    val newReplicaAssignment = Map(replica -> expectedLogDir)
+    val newReplicaAssignment = Map(replica -> expectedLogDir.replace("\\","\\\\"))
     ReassignPartitionsCommand.executeAssignment(zkUtils, Some(adminClient),
       ReassignPartitionsCommand.formatAsReassignmentJson(newAssignment, newReplicaAssignment), NoThrottle)
     waitForReassignmentToComplete()
@@ -179,9 +181,11 @@ class ReassignPartitionsClusterTest extends ZooKeeperTestHarness with Logging {
 
     val replica1 = new TopicPartitionReplica("topic1", 0, 102)
     val replica2 = new TopicPartitionReplica("topic2", 1, 100)
+    val replica1NewDir = getRandomLogDirAssignment(102)
+    val replica2NewDir = getRandomLogDirAssignment(100)
     val proposedReplicaAssignment: Map[TopicPartitionReplica, String] = Map(
-      replica1 -> getRandomLogDirAssignment(102),
-      replica2 -> getRandomLogDirAssignment(100)
+      replica1 -> replica1NewDir.replace("\\", "\\\\"),
+      replica2 -> replica2NewDir.replace("\\", "\\\\")
     )
 
     //When rebalancing
@@ -200,8 +204,8 @@ class ReassignPartitionsClusterTest extends ZooKeeperTestHarness with Logging {
 
     // The replicas should be in the expected log directories
     val replicaDirs = adminClient.describeReplicaLogDirs(List(replica1, replica2).asJavaCollection).all().get()
-    assertEquals(proposedReplicaAssignment(replica1), replicaDirs.get(replica1).getCurrentReplicaLogDir)
-    assertEquals(proposedReplicaAssignment(replica2), replicaDirs.get(replica2).getCurrentReplicaLogDir)
+    assertEquals(replica1NewDir, replicaDirs.get(replica1).getCurrentReplicaLogDir)
+    assertEquals(replica2NewDir, replicaDirs.get(replica2).getCurrentReplicaLogDir)
   }
 
   @Test

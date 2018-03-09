@@ -47,6 +47,10 @@ class HighwatermarkPersistenceTest {
 
   @After
   def teardown() {
+    logManagers.foreach(mgr => {
+      mgr.cleaner.startup() //Done to allow cleanup of log manager
+      mgr.shutdown()
+    })
     for (manager <- logManagers; dir <- manager.liveLogDirs)
       Utils.delete(dir)
   }
