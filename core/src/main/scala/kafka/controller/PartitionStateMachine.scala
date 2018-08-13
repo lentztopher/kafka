@@ -223,9 +223,10 @@ class PartitionStateMachine(controller: KafkaController, stateChangeLogger: Stat
    */
   private def initializeLeaderAndIsrForPartition(topicAndPartition: TopicAndPartition) = {
     val replicaAssignment = controllerContext.partitionReplicaAssignment(topicAndPartition).toList
-    val liveAssignedReplicas = replicaAssignment.filter(r => controllerContext.isReplicaOnline(r, topicAndPartition) && r != controllerContext.leaderIneligibleBrokerId)
+    val liveAssignedReplicas = replicaAssignment.filter(r => controllerContext.isReplicaOnline(r, topicAndPartition))
+    val liveLeaderCandidates = liveAssignedReplicas.filter( r => r != controllerContext.leaderIneligibleBrokerId)
     val stateChangeLog = stateChangeLogger.withControllerEpoch(controller.epoch)
-    liveAssignedReplicas.headOption match {
+    liveLeaderCandidates.headOption match {
       case None =>
         val failMsg = s"Encountered error during state change of partition $topicAndPartition from New to Online, " +
           s"assigned replicas are [${replicaAssignment.mkString(",")}], live brokers are " +
