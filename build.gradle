@@ -719,6 +719,35 @@ project(':core') {
     duplicatesStrategy 'exclude'
   }
 
+  task launcherJar(type: Jar) {
+    description = 'Create a Class-Path only Jar for launcher scripts and the application'
+    appendix = 'classpath'
+  }
+
+  project.gradle.taskGraph.whenReady { taskGraph ->
+    if (taskGraph.hasTask(launcherJar)) {
+      // provided extends compile, so we just want to remove the provided jars
+      def jars = configurations.runtime + configurations.archives.artifacts.files +
+          project(':tools').jar +
+          project(':tools').configurations.runtime +
+          project(':connect:api').jar +
+          project(':connect:api').configurations.runtime +
+          project(':connect:runtime').jar +
+          project(':connect:runtime').configurations.runtime +
+          project(':connect:transforms').jar +
+          project(':connect:transforms').configurations.runtime +
+          project(':connect:json').jar +
+          project(':connect:json').configurations.runtime +
+          project(':connect:file').jar +
+          project(':connect:file').configurations.runtime +
+          project(':streams').jar +
+          project(':streams').configurations.runtime +
+          project(':streams:examples').jar +
+          project(':streams:examples').configurations.runtime as Set
+      launcherJar.manifest.attributes("Class-Path": '../conf/ ' + jars*.name.join(' '))
+    }
+  }
+
   jar {
     dependsOn('copyDependantLibs')
   }
